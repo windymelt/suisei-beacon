@@ -20,6 +20,7 @@ class BARO:
     # temp: 0x2e, pressure1: 0x34, pressure2: 0x74, pressure3: 0xb4, pressure4: 0xf4
     try:
       smbus.SMBus(self.channel).write_i2c_block_data(self.address, 0xf4, [resolution])
+
   def readPressureValue(self):
     try:
       data = smbus.SMBus(self.channel).read_i2c_block_data(self.address, 0xf7)
