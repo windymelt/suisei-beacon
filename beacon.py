@@ -189,21 +189,44 @@ class BARO:
     print('tp: true_pressure ', p)
     true_pressure = p
     return true_pressure
-    
+
+  def getUt(self):
+    milli = 0.001
+    self.bus.write_byte_data(self.address, 0xf4, 0x2e)
+    time.sleep(4.5 * milli)
+    temp_msb = self.read_byte_i2c(0xf6)
+    temp_lsb = self.read_byte_i2c(0xf7)
+    ut = (temp_msb << 8) | temp_lsb
+    return ut
+      
+
+  def getTemperature(self):
+    try:
+      print('BARO temperature measuring beginning')
+      print('reading temperature')
+      ut = self.getUt()
+      print('UT ', ut)
+      b5 = self.calcb5(ut, self.ac5, self.ac6, self.mc, self.md)
+      print('b5', b5)
+
+      print('calculating true temp')
+      true_temp = self.calcTrueTemp(b5)
+      print('truetemp ', true_temp / 10.0 , ' degree')
+      return true_temp
+
+    except IOError as e:
+      print('I/O error:')
+      diag = subprocess.call(['i2cdetect', '-y', '1'])
+      print(diag)
+
+    except Exception as e:
+      print('Error: ' + str(e))
+
   def getPressure(self):
     milli = 0.001
     oss = 1 # 0: ultra low power, 1: standard, 2: high resolution, 3: ultra high resolution c.f. datasheet 
     try:
-      print('BARO measuring beginning')
-
-      print('reading temperature')
-      self.bus.write_byte_data(self.address, 0xf4, 0x2e)
-      time.sleep(4.5 * milli)
-      temp_msb = self.read_byte_i2c(0xf6)
-      temp_lsb = self.read_byte_i2c(0xf7)
-      ut = (temp_msb << 8) | temp_lsb
-      print('UT ', ut)
-
+      print('BARO pressure measuring beginning')
       print('reading pressure')
       self.bus.write_byte_data(self.address, 0xf4, 0x34 + (oss << 6))
       time.sleep(7.5 * milli) # oss: 1
@@ -217,13 +240,9 @@ class BARO:
       up = ((((msb << 8) | lsb) << 8) | xlsb) >> (8 - oss)
       print('UP ' ,up)
 
+      ut = self.getUt()
       b5 = self.calcb5(ut, self.ac5, self.ac6, self.mc, self.md)
       print('b5', b5)
-
-      print('calculating true temp')
-      true_temp = self.calcTrueTemp(b5)
-      print('truetemp ', true_temp / 10.0 , ' degree')
-
       print('calculating true pressure')
       true_pressure = self.calcTruePressure(self.ac1, self.ac2, self.ac3, self.ac4, up, self.b1, self.b2, b5, oss)
       print('true pressure ', true_pressure)
@@ -249,6 +268,7 @@ def conn_handler(clientsock, addr, gyro, baro):
       msgy = gyro.readYAxisValue()
       msgz = gyro.readZAxisValue()
       msgbaro = baro.getPressure()
+      msgtemp = baro.getTemperature()
 
       if msgx != None:
         clientsock.send(str(msgx / 2000.0))
@@ -258,6 +278,8 @@ def conn_handler(clientsock, addr, gyro, baro):
         clientsock.send(str(msgz / 2000.0))
         clientsock.send('*')
         clientsock.send(str(msgbaro / 100.0))
+        clientsock.send('*')
+        clientsock.send(str(msgtemp / 10.0))
         clientsock.send('\n')
         #time.sleep(0.1)
 
