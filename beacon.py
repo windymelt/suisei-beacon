@@ -4,7 +4,12 @@ import thread
 import smbus
 import subprocess
 import time
+import csv
+import atexit
 from contextlib import closing
+
+f = open('output.csv', 'ab') # If the file doesn't exist, create it
+csvWriter = csv.writer(f)
 
 ADDR_BARO = 0x77
 ADDR_MAGN = 0x1e
@@ -224,12 +229,13 @@ class BARO:
 
   def getPressure(self):
     milli = 0.001
-    oss = 1 # 0: ultra low power, 1: standard, 2: high resolution, 3: ultra high resolution c.f. datasheet 
+    oss = 3 # 0: ultra low power, 1: standard, 2: high resolution, 3: ultra high resolution c.f. datasheet 
+    ossWaitTime = [4.5, 7.5, 13.5, 23.5]
     try:
       print('BARO pressure measuring beginning')
       print('reading pressure')
       self.bus.write_byte_data(self.address, 0xf4, 0x34 + (oss << 6))
-      time.sleep(7.5 * milli) # oss: 1
+      time.sleep(ossWaitTime[oss] * milli)
       msb = self.read_byte_i2c(0xf6)
       print('msb ', hex(msb))
       lsb = self.read_byte_i2c(0xf7)
@@ -270,6 +276,8 @@ def conn_handler(clientsock, addr, gyro, baro):
       msgbaro = baro.getPressure()
       msgtemp = baro.getTemperature()
 
+      csvWriter.writerow([time.time(), msgx, msgy, msgz, msgbaro, msgtemp])
+
       if msgx != None:
         clientsock.send(str(msgx / 2000.0))
         clientsock.send('*')
@@ -285,6 +293,7 @@ def conn_handler(clientsock, addr, gyro, baro):
 
 def main():
   print('- Beacon -')
+  atexit.register(at_exit)
   host = '127.0.0.1'
   port = 10001
   backlog = 10
@@ -306,6 +315,9 @@ def main():
     print('Connected by ' , addr)
     thread.start_new_thread(conn_handler, (conn, addr, gyro, baro))
   conn.close()
+
+def at_exit():
+  f.close()
 
 if __name__ == '__main__':
   main()
