@@ -3,10 +3,10 @@ import smbus
 import subprocess
 
 class GYRO:
-  def __init__(self, addr, chnl):
-    print('GYRO ADDR: ' + hex(addr) + ' CHNL: ' + hex(chnl))
-    self.address = addr
+  def __init__(self, chnl):
+    self.address = 0x6b
     self.channel = chnl
+    print('GYRO ADDR: ' + hex(self.address) + ' CHNL: ' + hex(self.channel))
 
   def startMeasuring(self):
     try:

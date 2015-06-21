@@ -5,10 +5,10 @@ import subprocess
 import time
 
 class BARO:
-  def __init__(self, addr, chnl):
-    print('BARO ADDR: ' + hex(addr) + ' CHNL: ' + hex(chnl))
-    self.address = addr
+  def __init__(self, chnl):
+    self.address = 0x77
     self.channel = chnl
+    print('BARO ADDR: ' + hex(self.address) + ' CHNL: ' + hex(self.channel))
     self.bus = smbus.SMBus(chnl)
     self.oss = 1
 

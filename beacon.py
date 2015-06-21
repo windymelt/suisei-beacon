@@ -11,10 +11,8 @@ from gyro import GYRO
 from baro import BARO
 from contextlib import closing
 
-ADDR_BARO = 0x77
 ADDR_MAGN = 0x1e
 ADDR_ACCL = 0x18
-ADDR_GYRO = 0x6b
 
 CHANNEL = 1 # I2C bus channel no.
 
@@ -68,11 +66,11 @@ def main():
   backlog = 10
   bufsize = 4096
 
-  gyro = GYRO(ADDR_GYRO, CHANNEL)
+  gyro = GYRO(CHANNEL)
   gyro.startMeasuring()
   print('GYRO measuring started')
 
-  baro = BARO(ADDR_BARO, CHANNEL)
+  baro = BARO(CHANNEL)
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   sock.bind((host, port))
