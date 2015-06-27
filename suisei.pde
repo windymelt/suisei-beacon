@@ -24,15 +24,19 @@ float ygyro = 0;
 float zgyro = 0;
 double ixgyro, iygyro, izgyro = 0;
 float xacc, yacc, zacc = 0;
+float rawxacc, rawyacc, rawzacc = 0;
+float oldrawxacc, oldrawyacc, oldrawzacc = 0;
+float rollA, pitchA = 0;
 float baro = 0;
 float temp = 0;
 float seaLevelPressure = 1013;
 FloatList baros = new FloatList();
 
 void setup() {
+  blendMode(ADD);
   opencv = new OpenCV(this, 640, 480);
   video = new Capture(this, 640, 480);
-  size(opencv.width, opencv.height);
+  size(opencv.width, opencv.height, P3D);
 
   //opencv.loadCascade(OpenCV.CASCADE_FRONTALFACE);  
   //video.start();
@@ -64,11 +68,15 @@ void setup() {
   netClient = new Client(this, "127.0.0.1", 10001); 
 }
 
+boolean validNonZeroValue(float x) {
+  return x != Float.NaN && x != Float.POSITIVE_INFINITY && x != Float.NEGATIVE_INFINITY && x != 0.0;
+}
+
 void draw() {
 //  opencv.loadImage(video);
 //  image(video, 0, 0);
 //  faces = opencv.detect();
-  background(0);
+  background(0,0,0,0.05);
   noFill();
   stroke(0, 255, 0);
   
@@ -130,13 +138,39 @@ void draw() {
         baro = float(splited[3]);
         temp = float(splited[4]);
         
-        xacc = float(splited[5]);
-        yacc = float(splited[6]);
-        zacc = float(splited[7]);
-        float rollA = atan2(yacc, zacc);
-        float pitchA = atan2(xacc, zacc);
-        text(round(degrees(rollA) * 100.0) / 100.0 + " deg x", 0, 10);
-        text(round(degrees(pitchA) * 100.0) / 100.0 + " deg y", 0, 20);
+        oldrawxacc = rawxacc;
+        oldrawyacc = rawyacc;
+        oldrawzacc = rawzacc;
+        rawxacc = float(splited[5]);
+        rawyacc = float(splited[6]);
+        rawzacc = float(splited[7]);
+        // calcurate change ratio, ingore sensor value as invalid if the ratio exesses limit
+        // X AXIS
+        if(validNonZeroValue(xacc)) {
+          if(abs((abs(oldrawxacc - rawxacc) / oldrawxacc)) < 0.5) {
+            xacc = xacc * 0.9 + rawxacc * 0.1; // apply sensor value gently
+          }
+        } else {
+          xacc = rawxacc; // apply directly if there is no valid value
+        }
+        // Y AXIS
+        if(validNonZeroValue(yacc)) {
+          if(abs((abs(oldrawyacc - rawyacc) / oldrawyacc)) < 0.5) {
+            yacc = yacc * 0.9 + rawyacc * 0.1; // apply sensor value gently
+          }
+        } else {
+          yacc = rawyacc; // apply directly if there is no valid value
+        }
+        // Z AXIS
+        if(validNonZeroValue(zacc)) {
+          if(abs((abs(oldrawzacc - rawzacc) / oldrawzacc)) < 0.5) {
+            zacc = zacc * 0.9 + rawzacc * 0.1; // apply sensor value gently
+          }
+        } else {
+          zacc = rawzacc; // apply directly if there is no valid value
+        }
+        rollA = atan2(yacc, zacc);
+        pitchA = atan2(xacc, zacc);
         
         ixgyro += xgyro;
         iygyro += ygyro;
@@ -144,6 +178,15 @@ void draw() {
         izgyro += zgyro;
       }
   }
+  text(round(degrees(rollA) * 100.0) / 100.0 + " deg x", 0, 10);
+  text(round(degrees(pitchA) * 100.0) / 100.0 + " deg y", 0, 20);
+  pushMatrix();
+  translate(width/2, height/2);
+  rotateZ(-rollA);
+  rotateX(pitchA);
+  box(150,150,150);
+  popMatrix();
+  
   line(320, 300, 320, 300 + (float)iygyro * 100);
   line(320, 300, 320 + (float)izgyro * 100, 300);
   if(ixgyro < 0) {
