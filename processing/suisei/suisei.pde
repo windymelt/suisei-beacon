@@ -24,6 +24,8 @@ float ygyro = 0;
 float zgyro = 0;
 double ixgyro, iygyro, izgyro = 0;
 final float ALLOWED_CHANGE_RATE_ACC = 0.1;
+final float MIX_RAW_RATIO_ACC = 0.5;
+final float MIX_SENSOR_GYRO_RATIO_OF_ACC_GYRO = 0.9;
 float xacc, yacc, zacc = 0;
 float rawxacc, rawyacc, rawzacc = 0;
 float oldrawxacc, oldrawyacc, oldrawzacc = 0;
@@ -149,9 +151,7 @@ void draw() {
         // X AXIS
         if(validNonZeroValue(xacc)) {
           if(abs((abs(oldrawxacc - rawxacc) / oldrawxacc)) < ALLOWED_CHANGE_RATE_ACC) {
-            xacc = xacc * 0.9 + rawxacc * 0.1; // apply sensor value gently
-          } else {
-            rawxacc = xacc;
+            xacc = xacc * (1.0 - MIX_RAW_RATIO_ACC) + rawxacc * MIX_RAW_RATIO_ACC; // apply sensor value gently
           }
         } else {
           xacc = rawxacc; // apply directly if there is no valid value
@@ -159,9 +159,7 @@ void draw() {
         // Y AXIS
         if(validNonZeroValue(yacc)) {
           if(abs((abs(oldrawyacc - rawyacc) / oldrawyacc)) < ALLOWED_CHANGE_RATE_ACC) {
-            yacc = yacc * 0.9 + rawyacc * 0.1; // apply sensor value gently
-          } else {
-            rawyacc = yacc;
+            yacc = yacc * (1.0 - MIX_RAW_RATIO_ACC) + rawyacc * MIX_RAW_RATIO_ACC; // apply sensor value gently
           }
         } else {
           yacc = rawyacc; // apply directly if there is no valid value
@@ -169,15 +167,13 @@ void draw() {
         // Z AXIS
         if(validNonZeroValue(zacc)) {
           if(abs((abs(oldrawzacc - rawzacc) / oldrawzacc)) < ALLOWED_CHANGE_RATE_ACC) {
-            zacc = zacc * 0.9 + rawzacc * 0.1; // apply sensor value gently
-          } else {
-            rawzacc = zacc;
+            zacc = zacc * (1.0 - MIX_RAW_RATIO_ACC) + rawzacc * MIX_RAW_RATIO_ACC; // apply sensor value gently
           }
         } else {
           zacc = rawzacc; // apply directly if there is no valid value
         }
-        rollA = atan2(yacc, zacc);
-        pitchA = atan2(xacc, zacc);
+        rollA = atan2(yacc, zacc) * (1.0 - MIX_SENSOR_GYRO_RATIO_OF_ACC_GYRO) + (rollA + xgyro) * MIX_SENSOR_GYRO_RATIO_OF_ACC_GYRO;
+        pitchA = atan2(xacc, zacc) * (1.0 - MIX_SENSOR_GYRO_RATIO_OF_ACC_GYRO) + (pitchA + ygyro) * MIX_SENSOR_GYRO_RATIO_OF_ACC_GYRO;
         
         ixgyro += xgyro;
         iygyro += ygyro;
