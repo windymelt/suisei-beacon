@@ -11,6 +11,7 @@ class GYRO:
   def startMeasuring(self):
     try:
       print('GYRO measuring beginning')
+      # degree per sec.
       smbus.SMBus(self.channel).write_byte_data(self.address, 0x20, 0x7f) # 0x7f = 01111111b: 800 Hz ODR, 100 Hz cutoff, power on, x on, y on, z on.
       smbus.SMBus(self.channel).write_byte_data(self.address, 0x23, 0x20) # 0x20 : 2000 dps
 

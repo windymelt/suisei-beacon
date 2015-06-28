@@ -9,7 +9,10 @@ import atexit
 import sys
 from gyro import GYRO
 from baro import BARO
+from accl import ACCL
 from contextlib import closing
+#import numpy as np
+#from filterpy.kalman import KalmanFilter
 
 ADDR_MAGN = 0x1e
 ADDR_ACCL = 0x18
@@ -20,17 +23,26 @@ CHANNEL = 1 # I2C bus channel no.
 argvs = sys.argv
 argc = len(argvs)
 
-if argc == 0 or (argc == 1 and argvs[0] == 'beacon.py'):
+if argc <= 1:
   print('csv: quiet mode')
   output_file_name = '/dev/null'
 else:
-  print('csv: output is ' + argvs[0])
-  output_file_name = argvs[0]
+  print('csv: output is ' + argvs[1])
+  output_file_name = argvs[1]
 
 f = open(output_file_name, 'ab') # If the file doesn't exist, create it
 csvWriter = csv.writer(f)
 
-def conn_handler(clientsock, addr, gyro, baro):
+#kf = KalmanFilter(dim_x=3, dim_z=3)
+#kf.x = np.array([0., 0., 0.])
+#kf.F = np.array([[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]])
+#kf.H = np.array([[1., 1., 1.]])
+#kf.P *= 1000.
+#kf.R = 5
+#from filterpy.common import Q_discrete_white_noise
+#kf.Q = Q_discrete_white_noise(dim=3, dt=0.1, var=0.13)
+
+def conn_handler(clientsock, addr, gyro, baro, accl):
   while True:
     msg = clientsock.recv(1)
     if not msg:
@@ -42,21 +54,34 @@ def conn_handler(clientsock, addr, gyro, baro):
       msgz = gyro.readZAxisValue()
       msgbaro = baro.getPressure()
       msgtemp = baro.getTemperature()
+      accx = accl.readXAxisValue()
+      accy = accl.readYAxisValue()
+      accz = accl.readZAxisValue()
 
-      csvWriter.writerow([time.time(), msgx, msgy, msgz, msgbaro, msgtemp])
+      #kf.predict()
+      #kf.update(np.array([[msgx], [msgy], [msgz]]))
+      #print(kf.x)
+
+      csvWriter.writerow([time.time(), msgx, msgy, msgz, msgbaro, msgtemp, accx, accy, accz])
 
       if msgx != None:
-        clientsock.send(str(msgx / 2000.0))
+        clientsock.send(str(msgx * 0.01)) # msgx, degree per 0.01 sec.
         clientsock.send('*')
-        clientsock.send(str(msgy / 2000.0))
+        clientsock.send(str(msgy * 0.01)) # msgy
         clientsock.send('*')
-        clientsock.send(str(msgz / 2000.0))
+        clientsock.send(str(msgz * 0.01)) # msgz
         clientsock.send('*')
-        clientsock.send(str(msgbaro / 100.0))
+        clientsock.send(str(msgbaro / 100.0)) # msgbaro
         clientsock.send('*')
-        clientsock.send(str(msgtemp / 10.0))
+        clientsock.send(str(msgtemp / 10.0)) # msgtemp
+        clientsock.send('*')
+        clientsock.send(str(accx))
+        clientsock.send('*')
+        clientsock.send(str(accy))
+        clientsock.send('*')
+        clientsock.send(str(accz))
         clientsock.send('\n')
-        #time.sleep(0.1)
+        time.sleep(0.01)
 
 def main():
   print('- Beacon -')
@@ -70,6 +95,10 @@ def main():
   gyro.startMeasuring()
   print('GYRO measuring started')
 
+  accl = ACCL(CHANNEL)
+  accl.startMeasuring()
+  print('ACCL measuring started')
+
   baro = BARO(CHANNEL)
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -79,7 +108,7 @@ def main():
   while True:
     conn, addr = sock.accept()
     print('Connected by ' , addr)
-    thread.start_new_thread(conn_handler, (conn, addr, gyro, baro))
+    thread.start_new_thread(conn_handler, (conn, addr, gyro, baro, accl))
   conn.close()
 
 def at_exit():
