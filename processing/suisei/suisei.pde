@@ -23,6 +23,7 @@ float xgyro = 0;
 float ygyro = 0;
 float zgyro = 0;
 double ixgyro, iygyro, izgyro = 0;
+final float ALLOWED_CHANGE_RATE_ACC = 0.1;
 float xacc, yacc, zacc = 0;
 float rawxacc, rawyacc, rawzacc = 0;
 float oldrawxacc, oldrawyacc, oldrawzacc = 0;
@@ -147,24 +148,30 @@ void draw() {
         // calcurate change ratio, ignore sensor value as invalid if the ratio exesses limit
         // X AXIS
         if(validNonZeroValue(xacc)) {
-          if(abs((abs(oldrawxacc - rawxacc) / oldrawxacc)) < 0.5) {
+          if(abs((abs(oldrawxacc - rawxacc) / oldrawxacc)) < ALLOWED_CHANGE_RATE_ACC) {
             xacc = xacc * 0.9 + rawxacc * 0.1; // apply sensor value gently
+          } else {
+            rawxacc = xacc;
           }
         } else {
           xacc = rawxacc; // apply directly if there is no valid value
         }
         // Y AXIS
         if(validNonZeroValue(yacc)) {
-          if(abs((abs(oldrawyacc - rawyacc) / oldrawyacc)) < 0.5) {
+          if(abs((abs(oldrawyacc - rawyacc) / oldrawyacc)) < ALLOWED_CHANGE_RATE_ACC) {
             yacc = yacc * 0.9 + rawyacc * 0.1; // apply sensor value gently
+          } else {
+            rawyacc = yacc;
           }
         } else {
           yacc = rawyacc; // apply directly if there is no valid value
         }
         // Z AXIS
         if(validNonZeroValue(zacc)) {
-          if(abs((abs(oldrawzacc - rawzacc) / oldrawzacc)) < 0.5) {
+          if(abs((abs(oldrawzacc - rawzacc) / oldrawzacc)) < ALLOWED_CHANGE_RATE_ACC) {
             zacc = zacc * 0.9 + rawzacc * 0.1; // apply sensor value gently
+          } else {
+            rawzacc = zacc;
           }
         } else {
           zacc = rawzacc; // apply directly if there is no valid value
