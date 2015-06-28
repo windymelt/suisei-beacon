@@ -144,7 +144,7 @@ void draw() {
         rawxacc = float(splited[5]);
         rawyacc = float(splited[6]);
         rawzacc = float(splited[7]);
-        // calcurate change ratio, ingore sensor value as invalid if the ratio exesses limit
+        // calcurate change ratio, ignore sensor value as invalid if the ratio exesses limit
         // X AXIS
         if(validNonZeroValue(xacc)) {
           if(abs((abs(oldrawxacc - rawxacc) / oldrawxacc)) < 0.5) {
